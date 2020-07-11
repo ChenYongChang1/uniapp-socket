@@ -21,7 +21,7 @@ const recorderManager = uni.getRecorderManager();
 
 const innerAudioContext = uni.createInnerAudioContext();
 // innerAudioContext.autoplay = true;
-import { AliOss,Axios }  from '../alioss/audioOss'
+import { AliOss, Axios } from "../alioss/audioOss";
 export default {
   data() {
     return {
@@ -31,10 +31,10 @@ export default {
       uuid: plus.device.uuid,
       username: plus.device.vendor + "_" + plus.device.model + "手机",
       socket: "",
-	  ossSign:{},
-	  obj:{},
-	  alioss:null,
-	  assToken :'',
+      ossSign: {},
+      obj: {},
+      alioss: null,
+      assToken: "",
       recorder: "",
       audio: "",
       resInfo: "",
@@ -53,35 +53,35 @@ export default {
   },
   onLoad() {
     let that = this;
-	
+
     recorderManager.onStop(function (res) {
       console.log("录音停止了" + JSON.stringify(res)); //返回录音的临时保存地址, 可用于后面的播放
-      
-	  uni.saveFile({
-	        tempFilePath: res.tempFilePath,
-	        success: function (res) {
-	          // var savedFilePath = res.savedFilePath;
-			  that.fileReader(res.savedFilePath);
-	        }
-	      });
-      that.audio = res.tempFilePath;
+
+      // uni.saveFile({
+      //       tempFilePath: res.tempFilePath,
+      //       success: function (res) {
+      //         // var savedFilePath = res.savedFilePath;
+      that.fileReader(res.tempFilePath);
+      //       }
+      //     });
+      //    that.audio = res.tempFilePath;
     });
   },
   async onShow() {
     // this.socketnew()
     // socket.onSocketMessage(function (res) {
-    //   console.log('收到服务器内容：' + res.data); 
+    //   console.log('收到服务器内容：' + res.data);
     // });
-	console.log(this.assToken)
+    console.log(this.assToken);
     // this.getPhoneStatus()
     this.sockettest();
     this.getDeviceInfo();
     this.getSysInfo();
-	this.assToken =await new Axios().login()
-	console.log(this.assToken,'dddddddddddddddddddddddd')
-	this.alioss =await new AliOss(this.assToken)
-	this.ossSign=await this.alioss.initSign()
-	console.log(this.ossSign)
+    this.assToken = await new Axios().login();
+    console.log(this.assToken, "dddddddddddddddddddddddd");
+    this.alioss = await new AliOss(this.assToken);
+    this.ossSign = await this.alioss.initSign();
+    console.log(this.ossSign);
     // this.getContacts()
     // socket.onSocketOpen(function (res) {
     //   console.log('WebSocket连接已打开！');
@@ -101,16 +101,14 @@ export default {
         // fs.root是根目录操作对象DirectoryEntry
         fobject.root.getFile(path, { create: true }, function (fileEntry) {
           fileEntry.file(function (file) {
-			  
             var fileReader = new plus.io.FileReader();
             self.resInfo = JSON.stringify(file);
             fileReader.readAsText(file, "utf-8");
             fileReader.onloadend = function (evt) {
               self.resInfo = JSON.stringify(evt);
               // console.log(self.alioss.uploadFile);
-			  // self.alioss.uploadFile(self.ossSign,file)
-			  self.alioss.uploadFile(self.ossSign,{...file},path)
-			  
+              // self.alioss.uploadFile(self.ossSign,file)
+              self.alioss.uploadFile(self.ossSign, { ...file }, path);
             };
             // self.resInfo = self.resInfo+'--'+file.size + '--' + file.name;
             // console.log(file)
@@ -210,7 +208,6 @@ export default {
     },
     // 录音
     startRecord(obj) {
-		
       let time = 0;
       let that = this;
       if (!this.isRecord) {
@@ -218,28 +215,49 @@ export default {
         recorderTimer = setInterval(function () {
           time++;
         }, 1000);
+        // 1.创建recorder
+        this.recorder = plus.audio.getRecorder();
+        // 2.录音
+        this.recorder.record(
+          { filename: "_doc/audio/", format: "mp3" },
+          function (filePath) {
+            console.log(''+filePath, "22222222222222");
+			 that.fileReader(filePath)
+          }
+        );
+   //      recorderManager.start(
+   //        {
+   //          format: "mp3",
+   //          /**
+		 // * 
+		 // * var r = plus.audio.getRecorder();  
+			// r.record({filename:'_doc/audio/',format:'mp3',}, function(p){  
+			// 	console.log('录音完成：'+p);  
+			// }, function(e){  
+			// 	console.log('录音失败：'+e.message);  
+			// });*/
+   //          // });
+   //          //       // 1.创建recorder
+   //          //       this.recorder = plus.audio.getRecorder();
+   //          //       // 2.录音
+   //          //       this.recorder.record(
+   //          //         { filename: "_doc/audio/",format:'mp3' },
+   //          //         function (filePath) {
+   //          // console.log(filePath,'完成');
+   //          // that.fileReader(filePath)
+   //          // //           plus.io.resolveLocalFileSystemURL(filePath, function (entry) {
+   //          // //             console.log(filePath);
+   //          // //             console.log(entry,'--->',p);
+   //          // // that.audio = filePath
 
-        recorderManager.start({
-          format: "mp3",
-        });
-        //    // 1.创建recorder
-        //    this.recorder = plus.audio.getRecorder();
-        //    // 2.录音
-        //    this.recorder.record(
-        //      { filename: "_doc/audio/" },
-        //      function (filePath) {
-        //        plus.io.resolveLocalFileSystemURL(filePath, function (entry) {
-        //          console.log(filePath);
-        //          console.log(entry,'--->',p);
-        // that.audio = p
-
-        //        });
-        //      },
-        //      function (e) {
-        //        console.log("读取录音失败：" + e.message);
-        //      }
-        // );
-      } else {
+   //          // //           });
+   //        },
+   //        function (e) {
+   //          console.log("读取录音失败：" + e.message);
+   //        }
+   //      );
+      
+	  } else {
         this.isRecord = false;
         this.endRecord();
       }
@@ -247,9 +265,9 @@ export default {
     endRecord() {
       // 3.停止录音
       clearInterval(recorderTimer);
-      // this.recorder.stop();
-      recorderManager.stop();
-      recorderManager.onFrameRecorded;
+      this.recorder.stop();
+      // recorderManager.stop();
+      // recorderManager.onFrameRecorded;
       setTimeout(() => {
         innerAudioContext.src = this.audio;
 
@@ -437,7 +455,7 @@ export default {
 
       socket.on("message", function (obj) {
         console.log(obj, "有消息来了");
-		this.obj = obj;
+        this.obj = obj;
         // 分发状态 that[that.responseTypeObj[obj.responseType]](obj.message);
         switch (obj.responseType) {
           case "1":

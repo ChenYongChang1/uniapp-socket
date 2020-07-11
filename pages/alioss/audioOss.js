@@ -55,13 +55,13 @@ class AliOss{
   }
   async uploadFile(sign,file,imageSrc){
 	  // let imageSrc = sign.dir
-	  console.log(imageSrc,file,sign,+'/'+ file.name)
+	  console.log(imageSrc,file,sign,+'/'+ file.name,file.fullPath.replace(/\/storage\/emulated\/0/,''))
 	  uni.uploadFile({
 		 
 	                      url: sign.host,
-	                      files:[{uri:imageSrc,name: file.name}],
+	                      // files:[{uri:file.fullPath.replace(/\/storage\/emulated\/0/,''),name: file.name}],
 						  header: { 'content-type': 'multipart/form-data' },
-						  
+						  filePath:file.fullPath.replace(/\/storage\/emulated\/0/,''),
 	                      formData: {
 	                          'key': sign.dir+'/'+ file.name,
 	                          'policy': sign.policy,
@@ -71,7 +71,7 @@ class AliOss{
 	                          'signature': sign.signature,
 	                      },
 	                      success: (res) => {
-	                          console.log('uploadImage success, res is:', JSON.stringify(res),sign.host + '/cyc-save/'+file.name)
+	                          console.log('uploadImage success, res is:', JSON.stringify(res),sign.host+file.name)
 	                          uni.showToast({
 	                              title: '上传成功',
 	                              icon: 'success',
