@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      .list {
+        width: 400px;
+      }
+      div {
+        width: 100%;
+        min-height: 30px;
+        line-height: 30px;
+      }
+      .flex {
+        display: flex;
+      }
+      .room-list{
+        margin-bottom: 10px;
+      }
+      .room {
+        /* display: block; */
+        cursor: pointer;
+        padding: 0 10px;
+        height: 30px;
+        margin-right: 10px;
+        border: solid 1px gainsboro;
+        background: #f5f5f5;
+        box-sizing: border-box;
+        text-align: center;
+        line-height: 28px;
+      }
+      .room:not(.active):hover{
+        box-shadow: 1px 1px 3px 1px #f5f5f5;
+      }
+      div .active{
+        background: gainsboro;
+        color: white;
+      }
+      input {
+        height: 30px;
+        line-height: 30px;
+        box-sizing: border-box;
+        display: block;
+      }
+      button {
+        width: 80px;
+        height: 30px;
+        text-align: center;
+        line-height: 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="login flex" v-if="!userid">
+        <input type="text" v-model="username" />
+        <button @click="login">登录</button>
+      </div>
+      <div v-else>
+        <div>
+          name: {{username}} 房间: {{choosedRoom}}
+        </div>
+        <div class="room-list">
+          <span :class="choosedRoom === item.roomName ? 'room active': 'room'" v-for="item in roomList" @click="setRoom(item)">
+            {{item.roomName}}
+          </span>
+          <span class="room" @click="addRoom">
+            add
+          </span>
+        </div>
+        <div class="flex">
+          <input type="text" v-model="message" placeholder="消息" />
+          <button>发送</button>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.bootcss.com/socket.io/2.0.4/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+    <script>
+      var app = new Vue({
+        el: "#app",
+        data: {
+          userid: "",
+          socket: null,
+          username: "",
+          message: "",
+          sendTo: "",
+          HOST: "192.168.1.22",
+          choosedRoom:'',
+          roomList: [],
+          // ,{id:'5',name:'短信'},{id:'6',name:'短信db'}]
+          onlineUsersList: [],
+        },
+        mounted() {
+          //连接websocket后端服务器
+          this.socket = io.connect("ws://" + this.HOST + ":3028");
+          let that = this;
+          //监听消息发送
+          this.socket.on("message", function (obj) {
+            console.log(obj, "有消息来了");
+            that.setResponseTypeMethods(obj);
+          });
+          //监听用户退出
+          this.socket.on("logout", function (o) {
+            console.log(o, "由用户退出了");
+            that.onlineUsersList.splice(
+              that.onlineUsersList.findIndex((item) => item.id == o.user.id),
+              1
+            );
+          });
+        },
+        methods: {
+          setRoom(room){
+            this.comeInRoom(room)
+          },
+          addRoom(){
+            let name = prompt('房间号')
+            let key = prompt('密码')
+            let that = this;
+            this.socket.on("createroom", function (obj) {
+              console.log(obj, "createroom");
+              if (obj.code === 200) {
+                that.roomList = obj.data
+              }
+            });
+            this.socket.emit("createroom", {
+              roomName:name,
+              key:key
+            });
+          },
+          comeInRoom(room){
+            let key = prompt('请输入密码')
+            // comeinroom
+            let that = this;
+            this.socket.on("comeinroom", function (obj) {
+              console.log(obj, "comeinroom");
+              if (obj.code === 200) {
+                this.choosedRoom = (this.choosedRoom === room.roomName ? '' : room.roomName)
+              }
+            });
+            //告诉服务器端有comeinroom
+            this.socket.emit("comeinroom", {
+              key:key,
+              roomName: room.roomName,
+            });
+          },
+          // 根据返回的obj.responseType 来执行相印的方法
+          setResponseTypeMethods(obj) {},
+          genUid: function () {
+            return (
+              new Date().getTime() + "" + Math.floor(Math.random() * 899 + 100)
+            );
+          },
+          login() {
+            // this.userid = this.genUid();
+            //监听新用户登录
+            let that = this;
+            this.socket.on("login", function (obj) {
+              console.log(obj, "由用户登录了");
+              if (obj.code === 200) {
+                that.userid = obj.data.id;
+                that.onlineUsersList = obj.data.onlineUsers;
+                that.getRoom();
+              }
+            });
+            //告诉服务器端有用户登录
+            this.socket.emit("login", {
+              id: this.genUid(),
+              name: this.username,
+            });
+          },
+          getRoom() {
+            let that = this;
+            this.socket.on("getroom", function (obj) {
+              console.log(obj, "getroom");
+              if (obj.code === 200) {
+                that.roomList = obj.data;
+              }
+            });
+            //告诉服务器端有用户登录
+            this.socket.emit("getroom", {});
+          },
+          sendMessage(){}
+        },
+      });
+    </script>
+  </body>
+</html>

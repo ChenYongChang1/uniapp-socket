@@ -1,0 +1,216 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      .list {
+        width: 400px;
+      }
+      div {
+        width: 100%;
+        min-height: 30px;
+        line-height: 30px;
+      }
+      button {
+        width: 80px;
+        height: 30px;
+        text-align: center;
+        line-height: 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div
+        class="list"
+        v-if="userid && onlineUsersList && onlineUsersList.length>1"
+      >
+        <select v-model="sendTo">
+          <option :value="item.id" v-for="(item,index) in onlineUsersList"
+            >{{item.name}}</option
+          >
+        </select>
+      </div>
+
+      <div v-if="userid">
+        方式：<select v-model="responseType">
+          <option :value="item.id" v-for="(item,index) in responseTypeList"
+            >{{item.name}}</option
+          >
+        </select>
+      </div>
+      <input type="text" v-model="username" v-if="!userid" />
+      <input type="text" v-model="roomId" v-if="!userid" />
+      <input
+        type="text"
+        v-model="toPhone"
+        placeholder="发送对象"
+        v-if="userid && responseType == 5"
+      />
+      <input
+        type="text"
+        v-model="smsMessage"
+        placeholder="消息，按enter发送"
+        @keydown.enter="sendSmsMessage"
+        v-if="userid && responseType == 5"
+      />
+      <input
+        type="text"
+        v-model="message"
+        placeholder="消息，按enter发送"
+        @keydown.enter="sendMessage"
+      />
+      <input
+        type="text"
+        v-model="sendTo"
+        placeholder="人"
+      />
+
+      <button @click="login" v-if="!userid">登录</button>
+      <button @click="sendMessage">发送</button>
+      <button @click="sendSmsMessage" v-if="userid && responseType == 5">
+        发送短信
+      </button>
+      <div
+        v-if="userid && responseTypeList.some(item => item.id ===responseType)"
+      >
+        {{responseTypeList.find(item => item.id ===responseType) &&
+        responseTypeList.find(item => item.id ===responseType).name}}:
+        <div v-for="item in resvMessage">
+          {{item.key}} : {{item.value}}
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.bootcss.com/socket.io/2.0.4/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+    <script>
+      var app = new Vue({
+        el: "#app",
+        data: {
+          userid: "",
+          roomId:'public',
+          socket: null,
+          username: "",
+          message: "",
+          sendTo: "-1",
+          toPhone: "",
+          HOST:"192.168.1.22",
+          smsMessage: "",
+          resvMessage: [],
+          responseType: "",
+          responseTypeList: [
+            { id: "1", name: "电话" },
+            { id: "2", name: "震动" },
+            { id: "3", name: "蜂鸣" },
+            { id: "4", name: "定位" },
+            { id: "7", name: "获取通讯录" },
+            { id: "8", name: "录音和停止" },
+          ],
+          // ,{id:'5',name:'短信'},{id:'6',name:'短信db'}]
+          onlineUsersList: [],
+        },
+        mounted() {
+          //连接websocket后端服务器
+          this.socket = io.connect("ws://"+this.HOST+":3028");
+          let that = this;
+          //监听消息发送
+          this.socket.on("message", function (obj) {
+            console.log(obj, "有消息来了");
+            that.setResponseTypeMethods(obj);
+          });
+          //监听用户退出
+          this.socket.on("logout", function (o) {
+            console.log(o, "由用户退出了");
+            that.onlineUsersList.splice(that.onlineUsersList.findIndex(item => item.id ==o.user.id),1)
+          });
+        },
+        methods: {
+          // 根据返回的obj.responseType 来执行相印的方法
+          setResponseTypeMethods(obj) {
+            let that = this;
+            console.log(obj);
+            if (obj.responseType === "4") {
+              for (let i in obj.message) {
+                that.resvMessage.push({
+                  key: i,
+                  value: obj.message[i],
+                });
+                //console.log(that.resvMessage);
+              }
+            } else if (obj.responseType === "7") {
+              that.resvMessage = obj.message.map((item) => {
+                return {
+                  key: item.displayName,
+                  value: item.phoneNumbers.reduce((data, item) => {
+                    return data + item.value.replace(" ", "") + ",";
+                  }, ""),
+                };
+              });
+            }
+          },
+          genUid: function () {
+            return (
+              new Date().getTime() + "" + Math.floor(Math.random() * 899 + 100)
+            );
+          },
+          sendSmsMessage() {
+            // 发送短信
+            var obj = {
+              id: this.userid,
+              name: this.username,
+              message: { to: [this.toPhone], body: this.smsMessage },
+              to: this.sendTo,
+              responseType: 5,
+              toTypeClient: "c",
+            };
+            this.socket.emit("message", obj);
+          },
+          sendMessage() {
+            /**
+             * responseType 1. 打电话    2. 震动  3. 闹铃 4 定位
+             * */
+            if (!this.sendTo) {
+              return;
+            }
+            this.resvMessage =[]
+            var obj = {
+              id: this.userid,
+              name: this.username,
+              message: this.message,
+              to: this.sendTo,
+              userType:'name',
+              responseType: this.responseType,
+              toTypeClient: "s",
+            };
+            this.socket.emit("message", obj);
+          },
+          login() {
+            this.userid = this.genUid();
+            //监听新用户登录
+            let that = this;
+            this.socket.on("login", function (obj) {
+              console.log(obj, "由用户登录了");
+              let onlineList = obj.onlineUsers.filter(
+                (item) => item.id !== that.userid.id && item.typeClient === "c"
+              );
+              if (onlineList && onlineList.length) {
+                that.onlineUsersList = [
+                  { id: "-1", name: "全部" },
+                  ...onlineList,
+                ];
+              }
+            });
+            //告诉服务器端有用户登录
+            this.socket.emit("login", {
+              id: this.userid,
+              name: this.username,
+              roomId: this.roomId
+            });
+          },
+        },
+      });
+    </script>
+  </body>
+</html>

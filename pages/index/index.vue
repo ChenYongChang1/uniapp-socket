@@ -16,6 +16,7 @@
 
 <script>
 import io from "../../js_sdk/huzhen555-uniappsocketio/uniapp.socket.io.js";
+// import mui from '../../common/mui.min.js'
 let recorderTimer = "";
 const recorderManager = uni.getRecorderManager();
 
@@ -52,6 +53,7 @@ export default {
     };
   },
   onLoad() {
+    // mui.init()
     let that = this;
 
     recorderManager.onStop(function (res) {
@@ -221,43 +223,42 @@ export default {
         this.recorder.record(
           { filename: "_doc/audio/", format: "mp3" },
           function (filePath) {
-            console.log(''+filePath, "22222222222222");
-			 that.fileReader(filePath)
+            console.log("" + filePath, "22222222222222");
+            that.fileReader(filePath);
           }
         );
-   //      recorderManager.start(
-   //        {
-   //          format: "mp3",
-   //          /**
-		 // * 
-		 // * var r = plus.audio.getRecorder();  
-			// r.record({filename:'_doc/audio/',format:'mp3',}, function(p){  
-			// 	console.log('录音完成：'+p);  
-			// }, function(e){  
-			// 	console.log('录音失败：'+e.message);  
-			// });*/
-   //          // });
-   //          //       // 1.创建recorder
-   //          //       this.recorder = plus.audio.getRecorder();
-   //          //       // 2.录音
-   //          //       this.recorder.record(
-   //          //         { filename: "_doc/audio/",format:'mp3' },
-   //          //         function (filePath) {
-   //          // console.log(filePath,'完成');
-   //          // that.fileReader(filePath)
-   //          // //           plus.io.resolveLocalFileSystemURL(filePath, function (entry) {
-   //          // //             console.log(filePath);
-   //          // //             console.log(entry,'--->',p);
-   //          // // that.audio = filePath
+        //      recorderManager.start(
+        //        {
+        //          format: "mp3",
+        //          /**
+        // *
+        // * var r = plus.audio.getRecorder();
+        // r.record({filename:'_doc/audio/',format:'mp3',}, function(p){
+        // 	console.log('录音完成：'+p);
+        // }, function(e){
+        // 	console.log('录音失败：'+e.message);
+        // });*/
+        //          // });
+        //          //       // 1.创建recorder
+        //          //       this.recorder = plus.audio.getRecorder();
+        //          //       // 2.录音
+        //          //       this.recorder.record(
+        //          //         { filename: "_doc/audio/",format:'mp3' },
+        //          //         function (filePath) {
+        //          // console.log(filePath,'完成');
+        //          // that.fileReader(filePath)
+        //          // //           plus.io.resolveLocalFileSystemURL(filePath, function (entry) {
+        //          // //             console.log(filePath);
+        //          // //             console.log(entry,'--->',p);
+        //          // // that.audio = filePath
 
-   //          // //           });
-   //        },
-   //        function (e) {
-   //          console.log("读取录音失败：" + e.message);
-   //        }
-   //      );
-      
-	  } else {
+        //          // //           });
+        //        },
+        //        function (e) {
+        //          console.log("读取录音失败：" + e.message);
+        //        }
+        //      );
+      } else {
         this.isRecord = false;
         this.endRecord();
       }
